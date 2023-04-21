@@ -46,6 +46,17 @@ Package("com.qcobjects.cli.commands.publish-static",[
 
           // usage: dislist ("./build/", "./public/")
           function dirlist(sourcePath, destPath) {
+              const flist = (sourcePath, destPath)=>{
+                return fs.readdirSync(path.resolve(sourcePath), {
+                  withFileTypes: true
+                }).filter(f => f.isFile()).map(f => {
+                    return {
+                        name: f.name,
+                        source: path.resolve(sourcePath, `${f.name}`),
+                        dest: path.resolve(destPath, `${f.name}`)
+                    }
+                });
+              };
               const dirs = fs.readdirSync(path.resolve(sourcePath), {
                   withFileTypes: true
               }).filter(d => d.isDirectory()).map(d => {
@@ -54,26 +65,20 @@ Package("com.qcobjects.cli.commands.publish-static",[
                       source: path.resolve(sourcePath, `${d.name}`),
                       dest: path.resolve(destPath, `${d.name}`),
                       children: dirlist(path.resolve(sourcePath, `${d.name}`), path.resolve(destPath, `${d.name}`)),
-                      files: fs.readdirSync(path.resolve(sourcePath), {
-                          withFileTypes: true
-                      }).filter(f => f.isFile()).map(f => {
-                          return {
-                              name: f.name,
-                              source: path.resolve(sourcePath, `${f.name}`),
-                              dest: path.resolve(destPath, `${f.name}`)
-                          }
-                      })
+                      files: flist(sourcePath,destPath)
                   }
               });
-              return dirs;
+              return [].concat(flist(sourcePath, destPath)).concat(dirs);
           }
       
       
       
-          fs.mkdirSync(dest, {recursive:true});
+          fs.mkdirSync(path.dirname(dest), {recursive:true});
           logger.debug(`Copying directory ${source} to ${dest}...`);
-          dirlist(source, dest).filter(dirl => !exclude.includes(dirl.name)).map(dirl => {
-              fs.mkdirSync(dirl.dest, {recursive:true});
+          dirlist(source, dest)
+          .filter(dirl => !exclude.includes(dirl.name))
+          .map(dirl => {
+              fs.mkdirSync(path.dirname(dirl.dest), {recursive:true});
               if (typeof dirl.files !== "undefined") {
                   dirl.files.filter(f => !exclude.includes(f.name)).map((f) => {
                       logger.debug(`Copying file ${f.source} to ${f.dest}...`);
