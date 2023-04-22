@@ -21,7 +21,7 @@
  *
  * Everyone is permitted to copy and distribute verbatim copies of this
  * license document, but changing it is not allowed.
-*/
+ */
 /*eslint no-unused-vars: "off"*/
 /*eslint no-redeclare: "off"*/
 /*eslint no-empty: "off"*/
@@ -31,82 +31,76 @@
 "use strict";
 const fs = require("fs");
 const path = require("path");
-const absolutePath = path.resolve( __dirname, "./" );
-const { exec,execSync } = require("child_process");
-const process = require ("process");
+const absolutePath = path.resolve(__dirname, "./");
+const {
+  exec,
+  execSync
+} = require("child_process");
+const process = require("process");
 
-Package("com.qcobjects.cli.commands.publish-static",[
+Package("com.qcobjects.cli.commands.publish-static", [
 
   class CommandHandler extends InheritClass {
 
-    choiceOption={
-      publish_static(source, dest, options){
-        function copyDir(source, dest, exclude) {
-          const fs = require("fs");
+    choiceOption = {
+      publish_static(source, dest, options) {
 
-          // usage: dislist ("./build/", "./public/")
-          function dirlist(sourcePath, destPath) {
-              const flist = (sourcePath, destPath)=>{
-                return fs.readdirSync(path.resolve(sourcePath), {
-                  withFileTypes: true
-                }).filter(f => f.isFile()).map(f => {
-                    return {
-                        name: f.name,
-                        source: path.resolve(sourcePath, `${f.name}`),
-                        dest: path.resolve(destPath, `${f.name}`)
-                    }
-                });
-              };
-              const dirs = fs.readdirSync(path.resolve(sourcePath), {
-                  withFileTypes: true
-              }).filter(d => d.isDirectory()).map(d => {
-                  return {
-                      name: d.name,
-                      source: path.resolve(sourcePath, `${d.name}`),
-                      dest: path.resolve(destPath, `${d.name}`),
-                      children: dirlist(path.resolve(sourcePath, `${d.name}`), path.resolve(destPath, `${d.name}`)),
-                      files: flist(sourcePath,destPath)
-                  }
-              });
-              return [].concat(flist(sourcePath, destPath)).concat(dirs);
+        const copyDir = (source, dest, exclude) => {
+          source = path.resolve(source);
+          dest = path.resolve(dest);
+          const dname = path.basename(source);
+          const dirExcluded = (exclude.includes(dname));
+
+          const isDir = (d) => {
+            return (fs.existsSync(d) && fs.statSync(d).isDirectory())?(true):(false);
+          };
+
+          const isFile = (d) => {
+            return (fs.existsSync(d) && fs.statSync(d).isFile())?(true):(false);
           }
-      
-      
-      
-          fs.mkdirSync(path.dirname(dest), {recursive:true});
-          logger.debug(`Copying directory ${source} to ${dest}...`);
-          dirlist(source, dest)
-          .filter(dirl => !exclude.includes(dirl.name))
-          .map(dirl => {
-              fs.mkdirSync(path.dirname(dirl.dest), {recursive:true});
-              if (typeof dirl.files !== "undefined") {
-                  dirl.files.filter(f => !exclude.includes(f.name)).map((f) => {
-                      logger.debug(`Copying file ${f.source} to ${f.dest}...`);
-                      fs.copyFileSync(f.source, f.dest);
-                      logger.debug(`Copying file ${f.source} to ${f.dest}... DONE.`);
-                  });
-              }
-              if (typeof dirl.children !== "undefined") {
-                  dirl.children.filter(d => !exclude.includes(d.name)).map(d => {
-                      copyDir(d.source, d.dest, exclude);
-                  });
-              }
-          });
-          logger.debug(`Copying directory ${source} to ${dest}... DONE.`);
-        }
+
+          if (isDir(source) && !dirExcluded){
+            fs.mkdirSync(dest, {recursive:true});
+            const paths = fs.readdirSync(source, {withFileTypes:true})
+            const dirs = paths.filter(d=>d.isDirectory());
+            const files = paths.filter(f=>f.isFile());
+            (async function (paths, dirs, files, exclude){
+              files.map((f)=>{
+                const sourceFile = path.resolve(source, f.name);
+                const destFile = path.resolve(dest, f.name);
+                const fileExcluded = exclude.includes(f.name);
+                if (isFile(sourceFile) && !fileExcluded){
+                  logger.debug(`[publish:static] Copying files from ${sourceFile} to ${destFile} excluding ${exclude}...`);
+                  fs.copyFileSync(sourceFile, destFile);
+                  logger.debug(`[publish:static] Copying files from ${sourceFile} to ${destFile} excluding ${exclude}...DONE!`);
+                }
+              });
+              dirs.map((d)=>{
+                const sourceDir = path.resolve(source, d.name);
+                const destDir = path.resolve(dest, d.name);
+                copyDir(sourceDir,destDir, exclude);
+              });
+            })(paths, dirs, files, exclude);
+          }
+
+        };
 
         try {
           logger.info(`[publish:static] Copying files from ${source} to ${dest} excluding ${options.exclude}...`);
-          copyDir(source, dest, (typeof options.exclude !== "undefined")?(options.exclude):([]));
-        } catch (e){
+          copyDir(source, dest, (typeof options.exclude !== "undefined") ? (options.exclude) : ([]));
+        } catch (e) {
           logger.warn(`Something went wrong trying to publish static files: ${e.message}`);
           process.exit(1);
         }
       }
     };
 
-    constructor({switchCommander}){
-      super({switchCommander});
+    constructor({
+      switchCommander
+    }) {
+      super({
+        switchCommander
+      });
 
       let commandHandler = this;
       logger.debug("Loading command publish-static...");
@@ -115,8 +109,8 @@ Package("com.qcobjects.cli.commands.publish-static",[
         .allowExcessArguments(false)
         .option("-e, --exclude <excludePaths...>", "Exclude some paths or files")
         .description("Publishes (copy) all files and directories from source to dest")
-        .action(function(source, dest, options){
-            commandHandler.choiceOption.publish_static.call(commandHandler,source, dest, options);
+        .action(function (source, dest, options) {
+          commandHandler.choiceOption.publish_static.call(commandHandler, source, dest, options);
         });
 
       logger.debug("Loading command publish-static... DONE.");
