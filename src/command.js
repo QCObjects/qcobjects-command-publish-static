@@ -31,10 +31,8 @@
 /*eslint no-useless-escape: "off"*/
 (function (){
     "use strict";
-    const path = require("path");
-    const absolutePath = path.resolve( __dirname, "./" );
-    
-    Import (absolutePath + "/commands/com.qcobjects.cli.commands.publish-static.js");
-    Package ("qcobjects-command-publish-static", Package ("com.qcobjects.cli.commands.publish-static"));
+    require ( "./commands/com.qcobjects.cli.commands.publish-static.js");
+    Package ("qcobjects-command-publish-static", 
+    Package ("com.qcobjects.cli.commands.publish-static"));
 })();
 module.exports = global;
