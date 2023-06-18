@@ -1,6 +1,6 @@
 {
   "name": "qcobjects-command-publish-static",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "main": "src/index.cjs",
   "module": "src/index.mjs",
   "exports": {
